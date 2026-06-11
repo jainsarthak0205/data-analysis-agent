@@ -14,7 +14,7 @@ from data_analysis_agent.dataset import (
     format_dataframe,
     load_penguins,
 )
-from data_analysis_agent.llm import ClaudeClient
+from data_analysis_agent.llm import ClaudeClient, SUPPORTED_MODELS
 
 
 def _build_dataset(args) -> Dataset:
@@ -135,14 +135,22 @@ def _cmd_correlation(args):
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="data-analysis-agent",
-        description="Agentic pandas analyst over the Palmer Penguins dataset (Claude Opus 4.8).",
+        description="Agentic pandas analyst over the Palmer Penguins dataset (Claude tool use; defaults to Opus 4.8).",
     )
     p.add_argument("--csv", default=None, help="Path to a custom CSV (else the bundled Palmer Penguins)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     ap = sub.add_parser("ask", help="Ask a natural-language question; the agent answers with pandas")
     ap.add_argument("question")
-    ap.add_argument("--model", default=ClaudeClient.DEFAULT_MODEL)
+    ap.add_argument(
+        "--model",
+        default=ClaudeClient.DEFAULT_MODEL,
+        help=(
+            "Claude model id. Recommended: "
+            + ", ".join(SUPPORTED_MODELS)
+            + ". Any other Claude model id is also accepted."
+        ),
+    )
     ap.add_argument("--max-steps", type=int, default=10)
     ap.add_argument("--show-trace", action="store_true")
     ap.add_argument("--json", action="store_true")

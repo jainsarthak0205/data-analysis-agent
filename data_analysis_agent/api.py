@@ -14,7 +14,7 @@ from data_analysis_agent.dataset import (
     format_dataframe,
     load_penguins,
 )
-from data_analysis_agent.llm import ClaudeClient, LLMClient
+from data_analysis_agent.llm import ClaudeClient, LLMClient, SUPPORTED_MODELS
 
 
 DEFAULT_MODEL = os.environ.get("DATA_AGENT_MODEL", ClaudeClient.DEFAULT_MODEL)
@@ -83,6 +83,7 @@ class InfoResponse(BaseModel):
     n_cols: int
     columns: List[ColumnView]
     model: str
+    supported_models: List[str]
     api_key_configured: bool
 
 
@@ -129,7 +130,10 @@ class CorrelationResponse(BaseModel):
 
 app = FastAPI(
     title="data-analysis-agent",
-    description="Agentic pandas analyst over the Palmer Penguins dataset (Claude Opus 4.8).",
+    description=(
+        "Agentic pandas analyst over the Palmer Penguins dataset. Defaults to "
+        "Claude Opus 4.8; configurable via DATA_AGENT_MODEL env var."
+    ),
     version="0.1.0",
 )
 
@@ -148,6 +152,7 @@ def info():
         n_cols=ds.n_cols,
         columns=[ColumnView(**c.__dict__) for c in cols],
         model=DEFAULT_MODEL,
+        supported_models=list(SUPPORTED_MODELS),
         api_key_configured=bool(os.environ.get("ANTHROPIC_API_KEY")),
     )
 

@@ -1,8 +1,39 @@
-"""LLM client abstraction — same pattern as the prior agentic projects."""
+"""LLM client abstraction.
+
+Defaults to Claude Opus 4.8 but the ``ClaudeClient`` is model-agnostic: any
+Claude model that speaks the Messages API with tool use will work. Use
+``SUPPORTED_MODELS`` to enumerate the picks we have shipped guidance for, and
+``THINKING_MODELS`` to know which support the
+``thinking={"type": "adaptive"}`` extension.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Protocol
+from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
+
+
+SUPPORTED_MODELS: Tuple[str, ...] = (
+    "claude-opus-4-8",
+    "claude-opus-4-7",
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5",
+    "claude-fable-5",
+)
+
+THINKING_MODELS = {
+    "claude-opus-4-8",
+    "claude-opus-4-7",
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "claude-fable-5",
+}
+
+
+def supports_adaptive_thinking(model: str) -> bool:
+    """True if the given model accepts ``thinking={"type": "adaptive"}``."""
+    base = model.rsplit("-2", 1)[0]
+    return base in THINKING_MODELS or model in THINKING_MODELS
 
 
 @dataclass
@@ -31,7 +62,8 @@ class LLMClient(Protocol):
 
 
 class ClaudeClient:
-    """Wraps anthropic SDK; defaults to Claude Opus 4.8 + adaptive thinking."""
+    """Wraps the anthropic SDK. Model is configurable; adaptive thinking is
+    auto-disabled on models that don't support it (e.g. Haiku 4.5)."""
 
     DEFAULT_MODEL = "claude-opus-4-8"
 
@@ -39,7 +71,7 @@ class ClaudeClient:
         self,
         api_key: Optional[str] = None,
         model: str = DEFAULT_MODEL,
-        adaptive_thinking: bool = True,
+        adaptive_thinking: Optional[bool] = None,
     ):
         try:
             import anthropic  # noqa: F401
@@ -51,7 +83,10 @@ class ClaudeClient:
         self.anthropic = __import__("anthropic")
         self.client = self.anthropic.Anthropic(api_key=api_key)
         self.model = model
-        self.adaptive_thinking = adaptive_thinking
+        if adaptive_thinking is None:
+            self.adaptive_thinking = supports_adaptive_thinking(model)
+        else:
+            self.adaptive_thinking = bool(adaptive_thinking) and supports_adaptive_thinking(model)
 
     def complete(
         self,

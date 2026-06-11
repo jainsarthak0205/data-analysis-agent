@@ -1,6 +1,6 @@
 # data-analysis-agent
 
-> **An agentic pandas analyst. Claude Opus 4.8 inspects the schema, runs queries, groups and aggregates, and computes correlations against the bundled Palmer Penguins dataset — answering natural-language questions with concrete numbers from the data.**
+> **An agentic pandas analyst. Claude inspects the schema, runs queries, groups and aggregates, and computes correlations against the bundled Palmer Penguins dataset — answering natural-language questions with concrete numbers from the data. Defaults to Claude Opus 4.8 but supports any Claude model (Opus 4.6/4.7/4.8, Sonnet 4.6, Haiku 4.5, Fable 5).**
 
 Different shape from [sql-agent](https://github.com/jainsarthak0205/sql-agent): instead of writing SQL strings, the agent calls **structured pandas operations** through six typed tools. The tool surface is the safety boundary — no `eval()` on raw Python, no DataFrame mutation, no arbitrary callables in aggregation.
 
@@ -163,7 +163,7 @@ Environment variables:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | (none) | Required for `/ask` and CLI `ask` |
-| `DATA_AGENT_MODEL` | `claude-opus-4-8` | Override the Claude model ID |
+| `DATA_AGENT_MODEL` | `claude-opus-4-8` | Override the Claude model ID. Recommended: `claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5`, `claude-fable-5`. Any other Claude model id is also accepted. |
 | `DATA_AGENT_MAX_STEPS` | `10` | Max agentic-loop iterations per question |
 
 ## Deploy
@@ -183,7 +183,7 @@ curl -X POST http://localhost:8000/ask \
 - **Aggregations are sorted descending by the result column.** "Which species is heaviest?" should not require the agent to read the rows in arbitrary order — sorting by the aggregated column means the answer is in row 0. Small but meaningful: it shaves a tool call.
 - **Correlations report `n_used` alongside `r`.** Real-world data has nulls; an `r` computed on 342 rows is more trustworthy than an `r` computed on 12. Surfacing `n_used` lets the agent caveat its conclusions appropriately.
 - **The static endpoints (`/aggregate`, `/correlation`, `/query`) share code with the agent's tools.** Same `Dataset.aggregate(...)` is called whether the request comes in via the LLM's `tool_use` block or via `POST /aggregate`. This means the HTTP API can be used as a deterministic, no-cost fallback when you don't want to spend tokens.
-- **Adaptive thinking is on by default.** `ClaudeClient` sets `thinking={"type": "adaptive"}` per the Claude API reference's recommendation for Opus 4.8.
+- **Adaptive thinking is on by default**, but auto-disabled on models that don't support it (e.g. Haiku 4.5). On Opus 4.6+/Sonnet 4.6/Fable 5, `ClaudeClient` sets `thinking={"type": "adaptive"}`. See `SUPPORTED_MODELS` / `THINKING_MODELS` in `data_analysis_agent/llm.py`.
 - **`data_analysis_agent/dataset.py`, not `data.py`.** The package has a `data_analysis_agent/data/` directory holding the CSV; naming the loader `data.py` would make it inaccessible (subpackage wins on import).
 
 ## Tests
